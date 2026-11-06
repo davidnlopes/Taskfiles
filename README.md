@@ -144,6 +144,7 @@ tasks:
 | Variable | Default | Description |
 | --- | --- | --- |
 | `TERRAFORM_BIN` | `terraform` | Terraform executable. |
+| `TERRAFORM_ENV` | (empty) | Environment assignments that prefix every Terraform command, for example `AWS_PROFILE=my-profile`. |
 | `TERRAFORM_DIR` | `.` | Root module directory, passed to `-chdir`. |
 | `TERRAFORM_WORKSPACE` | (empty) | Workspace to select, created if missing. If empty, the tasks do not touch workspaces. |
 | `TERRAFORM_VAR_FILES` | (empty) | Space-separated `.tfvars` files for `plan`, `apply`, and `destroy`. If empty, no `-var-file` flag is passed. |
@@ -155,6 +156,8 @@ tasks:
 | `TERRAFORM_LOCK_PLATFORMS` | `linux_amd64 linux_arm64 darwin_amd64 darwin_arm64 windows_amd64` | Platforms that `lock` records in `.terraform.lock.hcl`. |
 
 Terraform runs with `-chdir=$TERRAFORM_DIR`, so it resolves relative paths in `TERRAFORM_VAR_FILES` and `TERRAFORM_*_ARGS` against `TERRAFORM_DIR`.
+
+To give Terraform an environment variable that your other tasks must not see, use `TERRAFORM_ENV`. A root `env` in your Taskfile reaches every task, and an `env` on a task that calls a Terraform task does not reach it. The value is shell text, so quote any value that contains a space, for example `NAME="two words"`.
 
 The variables use the `TERRAFORM_` prefix, not `TF_`. Terraform reads `TF_*` environment variables itself. For example, `TF_WORKSPACE` overrides workspace selection.
 

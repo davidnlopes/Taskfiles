@@ -10,6 +10,7 @@ tasks:
     run: when_changed
     vars: &vars
       TERRAFORM_BIN: '{{.TERRAFORM_BIN | default "terraform"}}'
+      TERRAFORM_ENV: '{{.TERRAFORM_ENV | default ""}}'
       TERRAFORM_DIR: '{{.TERRAFORM_DIR | default "."}}'
       TERRAFORM_WORKSPACE: '{{.TERRAFORM_WORKSPACE | default ""}}'
       TERRAFORM_VAR_FILES: '{{.TERRAFORM_VAR_FILES | default ""}}'
@@ -19,7 +20,7 @@ tasks:
       TERRAFORM_APPLY_ARGS: '{{.TERRAFORM_APPLY_ARGS | default ""}}'
       TERRAFORM_DESTROY_ARGS: '{{.TERRAFORM_DESTROY_ARGS | default ""}}'
       TERRAFORM_LOCK_PLATFORMS: '{{.TERRAFORM_LOCK_PLATFORMS | default "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64 windows_amd64"}}'
-      terraform: '{{.TERRAFORM_BIN}} -chdir={{q .TERRAFORM_DIR}}'
+      terraform: '{{.TERRAFORM_ENV}} {{.TERRAFORM_BIN}} -chdir={{q .TERRAFORM_DIR}}'
       var_file_args: '{{range splitArgs .TERRAFORM_VAR_FILES}}-var-file={{q .}} {{end}}'
       auto_approve_arg: '{{if eq .TERRAFORM_AUTO_APPROVE "true"}}-auto-approve{{end}}'
     cmds:
@@ -33,6 +34,7 @@ tasks:
       - task: init
         vars: &init_call_vars
           TERRAFORM_BIN: '{{.TERRAFORM_BIN}}'
+          TERRAFORM_ENV: '{{.TERRAFORM_ENV}}'
           TERRAFORM_DIR: '{{.TERRAFORM_DIR}}'
           TERRAFORM_INIT_ARGS: '{{.TERRAFORM_INIT_ARGS}}'
     cmds:
@@ -62,6 +64,7 @@ tasks:
       - task: workspace
         vars: &workspace_call_vars
           TERRAFORM_BIN: '{{.TERRAFORM_BIN}}'
+          TERRAFORM_ENV: '{{.TERRAFORM_ENV}}'
           TERRAFORM_DIR: '{{.TERRAFORM_DIR}}'
           TERRAFORM_INIT_ARGS: '{{.TERRAFORM_INIT_ARGS}}'
           TERRAFORM_WORKSPACE: '{{.TERRAFORM_WORKSPACE}}'

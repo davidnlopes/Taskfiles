@@ -252,13 +252,12 @@ tasks:
 
 ## Docker (`docker.yml`)
 
-`docker.yml` builds an image and pushes it to a registry. It requires Docker 23.0 or later, where `docker build` uses BuildKit. Run `docker login` before you push.
+`docker.yml` builds an image and pushes it to a registry as two separate tasks. It requires Docker 23.0 or later, where `docker build` uses BuildKit. Run `docker login` before you push.
 
 | Task | Description |
 | --- | --- |
 | `build` | Build the image and tag it locally. |
 | `push` | Push the tags that `build` created to `DOCKER_REGISTRY`. |
-| `build-push` | Build the image and push it to `DOCKER_REGISTRY` in one step. |
 
 To test an image and then push the same image, run `build` and then `push`, with the same `DOCKER_REGISTRY`, `DOCKER_IMAGE`, and `DOCKER_TAGS`:
 
@@ -276,10 +275,10 @@ task docker:build DOCKER_TAGS="1.2.0 latest"
 task docker:push DOCKER_TAGS="1.2.0 latest"
 ```
 
-To publish a multi-platform image, run `build-push`, because a local image store might not hold one. The builder must support every platform you list. To select a builder, pass `--builder` in `DOCKER_BUILD_FLAGS`:
+To publish a multi-platform image, pass `--push` to `build`, because a local image store might not hold one. The builder must support every platform you list. To select a builder, pass `--builder` in `DOCKER_BUILD_FLAGS`:
 
 ```bash
-task docker:build-push DOCKER_TAGS=1.2.0 DOCKER_BUILD_PLATFORMS="linux/amd64 linux/arm64"
+task docker:build DOCKER_TAGS=1.2.0 DOCKER_BUILD_PLATFORMS="linux/amd64 linux/arm64" DOCKER_BUILD_FLAGS=--push
 ```
 
 ### Docker variables
@@ -287,7 +286,7 @@ task docker:build-push DOCKER_TAGS=1.2.0 DOCKER_BUILD_PLATFORMS="linux/amd64 lin
 | Variable | Default | Description |
 | --- | --- | --- |
 | `DOCKER_IMAGE` | Required | Image name without registry or tag, for example `my-app`. |
-| `DOCKER_REGISTRY` | Required by `push` and `build-push` | Registry and optional namespace, for example `ghcr.io/my-org`. If you set it for `build`, it prefixes the local tags. |
+| `DOCKER_REGISTRY` | Required by `push` | Registry and optional namespace, for example `ghcr.io/my-org`. If you set it for `build`, it prefixes the local tags. |
 | `DOCKER_BIN` | `docker` | Docker executable. |
 | `DOCKER_TAGS` | `latest` | Space-separated image tags. |
 | `DOCKER_BUILD_CONTEXT` | `.` | Build context. |

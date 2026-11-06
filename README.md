@@ -240,7 +240,7 @@ task docker:build DOCKER_TAGS=1.2.0 DOCKER_BUILD_PLATFORMS="linux/amd64 linux/ar
 | Variable | Default | Description |
 | --- | --- | --- |
 | `DOCKER_IMAGE` | Required | Image name without registry or tag, for example `my-app`. |
-| `DOCKER_REGISTRY` | Required by `push` | Registry and optional namespace, for example `ghcr.io/my-org`. If you set it for `build`, it prefixes the local tags. |
+| `DOCKER_REGISTRY` | Required by `push`, and by `build` when `DOCKER_BUILD_FLAGS` contains `--push` | Registry and optional namespace, for example `ghcr.io/my-org`. If you set it for `build`, it prefixes the local tags. |
 | `DOCKER_BIN` | `docker` | Docker executable. |
 | `DOCKER_TAGS` | `latest` | Space-separated image tags. |
 | `DOCKER_BUILD_CONTEXT` | `.` | Build context. |

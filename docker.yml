@@ -22,6 +22,8 @@ tasks:
       - &image_not_empty
         sh: '{{if .DOCKER_IMAGE}}true{{else}}false{{end}}'
         msg: DOCKER_IMAGE must not be empty
+      - sh: '{{if and (contains "--push" .DOCKER_BUILD_FLAGS) (not .DOCKER_REGISTRY)}}false{{else}}true{{end}}'
+        msg: DOCKER_REGISTRY must not be empty when DOCKER_BUILD_FLAGS contains --push
     cmds:
       - >-
         {{.DOCKER_BIN}} build

@@ -1,0 +1,50 @@
+version: '3'
+
+# Defaults are task-level vars for the reason given in terraform.yml.
+
+tasks:
+  build:
+    desc: Build the image and tag it locally
+    requires:
+      vars: [DOCKER_IMAGE]
+    vars: &vars
+      DOCKER_BIN: '{{.DOCKER_BIN | default "docker"}}'
+      DOCKER_TAGS: '{{.DOCKER_TAGS | default "latest"}}'
+      DOCKER_BUILD_CONTEXT: '{{.DOCKER_BUILD_CONTEXT | default "."}}'
+      DOCKER_BUILD_FILE: '{{.DOCKER_BUILD_FILE | default ""}}'
+      DOCKER_BUILD_TARGET: '{{.DOCKER_BUILD_TARGET | default ""}}'
+      DOCKER_BUILD_ARGS: '{{.DOCKER_BUILD_ARGS | default ""}}'
+      DOCKER_BUILD_PLATFORMS: '{{.DOCKER_BUILD_PLATFORMS | default ""}}'
+      DOCKER_BUILD_FLAGS: '{{.DOCKER_BUILD_FLAGS | default ""}}'
+      DOCKER_PUSH_FLAGS: '{{.DOCKER_PUSH_FLAGS | default ""}}'
+      image_ref: '{{if .DOCKER_REGISTRY}}{{trimSuffix "/" .DOCKER_REGISTRY}}/{{end}}{{.DOCKER_IMAGE}}'
+    preconditions:
+      - &image_not_empty
+        sh: '{{if .DOCKER_IMAGE}}true{{else}}false{{end}}'
+        msg: DOCKER_IMAGE must not be empty
+      - sh: '{{if and (contains "--push" .DOCKER_BUILD_FLAGS) (not .DOCKER_REGISTRY)}}false{{else}}true{{end}}'
+        msg: DOCKER_REGISTRY must not be empty when DOCKER_BUILD_FLAGS contains --push
+    cmds:
+      - >-
+        {{.DOCKER_BIN}} build
+        {{range splitArgs .DOCKER_TAGS}}--tag {{q (printf "%s:%s" $.image_ref .)}} {{end}}
+        {{if .DOCKER_BUILD_FILE}}--file {{q .DOCKER_BUILD_FILE}}{{end}}
+        {{if .DOCKER_BUILD_TARGET}}--target {{q .DOCKER_BUILD_TARGET}}{{end}}
+        {{range splitArgs .DOCKER_BUILD_ARGS}}--build-arg {{q .}} {{end}}
+        {{if .DOCKER_BUILD_PLATFORMS}}--platform {{.DOCKER_BUILD_PLATFORMS | splitArgs | join ","}}{{end}}
+        {{.DOCKER_BUILD_FLAGS}}
+        {{q .DOCKER_BUILD_CONTEXT}}
+
+  push:
+    desc: Push the tags that the build task created to DOCKER_REGISTRY
+    requires:
+      vars: [DOCKER_REGISTRY, DOCKER_IMAGE]
+    vars: *vars
+    # requires accepts an empty value, and an empty registry pushes the image to Docker Hub.
+    preconditions:
+      - sh: '{{if .DOCKER_REGISTRY}}true{{else}}false{{end}}'
+        msg: DOCKER_REGISTRY must not be empty
+      - *image_not_empty
+    cmds:
+      - for: { var: DOCKER_TAGS }
+        cmd: '{{.DOCKER_BIN}} push {{.DOCKER_PUSH_FLAGS}} {{q (printf "%s:%s" .image_ref .ITEM)}}'

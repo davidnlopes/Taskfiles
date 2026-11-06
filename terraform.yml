@@ -1,0 +1,101 @@
+version: '3'
+
+# Defaults live in task-level vars in every Taskfile of this repository. A file-level
+# var in an included Taskfile overwrites the consumer's root var of the same name, and
+# call vars never reach its template. Deps do not inherit call vars, so tasks forward them.
+
+tasks:
+  init:
+    desc: Initialise the root module
+    run: when_changed
+    vars: &vars
+      TERRAFORM_BIN: '{{.TERRAFORM_BIN | default "terraform"}}'
+      TERRAFORM_DIR: '{{.TERRAFORM_DIR | default "."}}'
+      TERRAFORM_WORKSPACE: '{{.TERRAFORM_WORKSPACE | default ""}}'
+      TERRAFORM_VAR_FILES: '{{.TERRAFORM_VAR_FILES | default ""}}'
+      TERRAFORM_AUTO_APPROVE: '{{.TERRAFORM_AUTO_APPROVE | default "false"}}'
+      TERRAFORM_INIT_ARGS: '{{.TERRAFORM_INIT_ARGS | default ""}}'
+      TERRAFORM_PLAN_ARGS: '{{.TERRAFORM_PLAN_ARGS | default ""}}'
+      TERRAFORM_APPLY_ARGS: '{{.TERRAFORM_APPLY_ARGS | default ""}}'
+      TERRAFORM_DESTROY_ARGS: '{{.TERRAFORM_DESTROY_ARGS | default ""}}'
+      TERRAFORM_LOCK_PLATFORMS: '{{.TERRAFORM_LOCK_PLATFORMS | default "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64 windows_amd64"}}'
+      terraform: '{{.TERRAFORM_BIN}} -chdir={{q .TERRAFORM_DIR}}'
+      var_file_args: '{{range splitArgs .TERRAFORM_VAR_FILES}}-var-file={{q .}} {{end}}'
+      auto_approve_arg: '{{if eq .TERRAFORM_AUTO_APPROVE "true"}}-auto-approve{{end}}'
+    cmds:
+      - '{{.terraform}} init {{.TERRAFORM_INIT_ARGS}}'
+
+  workspace:
+    desc: Select TERRAFORM_WORKSPACE, creating it if missing
+    run: when_changed
+    vars: *vars
+    deps:
+      - task: init
+        vars: &init_call_vars
+          TERRAFORM_BIN: '{{.TERRAFORM_BIN}}'
+          TERRAFORM_DIR: '{{.TERRAFORM_DIR}}'
+          TERRAFORM_INIT_ARGS: '{{.TERRAFORM_INIT_ARGS}}'
+    cmds:
+      - cmd: '{{.terraform}} workspace select -or-create {{q .TERRAFORM_WORKSPACE}}'
+        if: '{{if .TERRAFORM_WORKSPACE}}true{{else}}false{{end}}'
+
+  fmt:
+    desc: Rewrite Terraform files to canonical format
+    vars: *vars
+    cmds:
+      - '{{.terraform}} fmt -recursive'
+
+  lint:
+    desc: Check formatting and validate the configuration
+    vars: *vars
+    deps:
+      - task: init
+        vars: *init_call_vars
+    cmds:
+      - '{{.terraform}} fmt -recursive -check'
+      - '{{.terraform}} validate'
+
+  plan:
+    desc: Show the changes Terraform would make
+    vars: *vars
+    deps:
+      - task: workspace
+        vars: &workspace_call_vars
+          TERRAFORM_BIN: '{{.TERRAFORM_BIN}}'
+          TERRAFORM_DIR: '{{.TERRAFORM_DIR}}'
+          TERRAFORM_INIT_ARGS: '{{.TERRAFORM_INIT_ARGS}}'
+          TERRAFORM_WORKSPACE: '{{.TERRAFORM_WORKSPACE}}'
+    cmds:
+      - '{{.terraform}} plan {{.var_file_args}} {{.TERRAFORM_PLAN_ARGS}}'
+
+  apply:
+    desc: Apply changes (TERRAFORM_AUTO_APPROVE=true skips the prompt)
+    vars: *vars
+    requires: &auto_approve_enum
+      vars:
+        - name: TERRAFORM_AUTO_APPROVE
+          enum: ['true', 'false']
+    deps:
+      - task: workspace
+        vars: *workspace_call_vars
+    cmds:
+      - '{{.terraform}} apply {{.var_file_args}} {{.auto_approve_arg}} {{.TERRAFORM_APPLY_ARGS}}'
+
+  destroy:
+    desc: Destroy all resources (TERRAFORM_AUTO_APPROVE=true skips the prompt)
+    vars: *vars
+    requires: *auto_approve_enum
+    deps:
+      - task: workspace
+        vars: *workspace_call_vars
+    cmds:
+      - '{{.terraform}} destroy {{.var_file_args}} {{.auto_approve_arg}} {{.TERRAFORM_DESTROY_ARGS}}'
+
+  lock:
+    desc: Record provider checksums for TERRAFORM_LOCK_PLATFORMS
+    vars: *vars
+    deps:
+      - task: init
+        vars: *init_call_vars
+    cmds:
+      - '{{.terraform}} providers lock {{range splitArgs .TERRAFORM_LOCK_PLATFORMS}}-platform={{q .}} {{end}}'

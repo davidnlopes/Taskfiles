@@ -1,0 +1,71 @@
+version: '3'
+
+tasks:
+  fmt:
+    desc: Rewrite Go files with gofmt -s
+    vars: &vars
+      GO_BIN: '{{.GO_BIN | default "go"}}'
+      GO_DIR: '{{.GO_DIR | default "."}}'
+      GO_BUILD_PKG: '{{.GO_BUILD_PKG | default "."}}'
+      GO_BUILD_OUTPUT: '{{.GO_BUILD_OUTPUT | default (printf "%s/bin/" .ROOT_DIR)}}'
+      GO_BUILD_OS: '{{.GO_BUILD_OS | default ""}}'
+      GO_BUILD_ARCH: '{{.GO_BUILD_ARCH | default ""}}'
+      GO_BUILD_CGO_ENABLED: '{{.GO_BUILD_CGO_ENABLED | default ""}}'
+      GO_BUILD_FLAGS: '{{.GO_BUILD_FLAGS | default ""}}'
+      GO_TEST_PKGS: '{{.GO_TEST_PKGS | default "./..."}}'
+      GO_TEST_FLAGS: '{{.GO_TEST_FLAGS | default ""}}'
+      GO_COVER_PROFILE: '{{if hasKey . "GO_COVER_PROFILE"}}{{.GO_COVER_PROFILE}}{{else}}cover.out{{end}}'
+      GO_COVER_HTML: '{{.GO_COVER_HTML | default "cover.html"}}'
+      # gofmt from GO_BIN's GOROOT, so formatting matches the selected toolchain rather than whichever gofmt is on PATH.
+      gofmt: '"$({{.GO_BIN}} env GOROOT)/bin/gofmt"'
+    # cd, not the dir key: dir creates a missing directory, so go:fmt succeeds on a mistyped GO_DIR.
+    cmds:
+      - cd {{q .GO_DIR}} && {{.gofmt}} -s -w .
+
+  tidy:
+    desc: Add missing and remove unused module requirements
+    vars: *vars
+    cmds:
+      - cd {{q .GO_DIR}} && {{.GO_BIN}} mod tidy
+
+  lint:
+    desc: Check gofmt -s formatting and run go vet
+    vars: *vars
+    cmds:
+      - cmd: |
+          cd {{q .GO_DIR}} && files=$({{.gofmt}} -s -l .) && if [ -n "$files" ]; then
+            echo "These files need formatting (run the fmt task):"; echo "$files"; exit 1
+          fi
+        silent: true
+      - cd {{q .GO_DIR}} && {{.GO_BIN}} vet ./...
+
+  test:
+    desc: Run tests, writing GO_COVER_PROFILE when set
+    run: when_changed
+    vars: *vars
+    cmds:
+      - cd {{q .GO_DIR}} && {{.GO_BIN}} test {{.GO_TEST_FLAGS}} {{if .GO_COVER_PROFILE}}-coverprofile={{q .GO_COVER_PROFILE}}{{end}} {{.GO_TEST_PKGS}}
+
+  cover-html:
+    desc: Run tests and render the coverage profile as HTML
+    vars: *vars
+    preconditions:
+      - sh: '{{if .GO_COVER_PROFILE}}true{{else}}false{{end}}'
+        msg: GO_COVER_PROFILE must be set for the cover-html task
+    cmds:
+      - task: test
+        vars:
+          GO_BIN: '{{.GO_BIN}}'
+          GO_DIR: '{{.GO_DIR}}'
+          GO_TEST_PKGS: '{{.GO_TEST_PKGS}}'
+          GO_TEST_FLAGS: '{{.GO_TEST_FLAGS}}'
+          GO_COVER_PROFILE: '{{.GO_COVER_PROFILE}}'
+      - cd {{q .GO_DIR}} && {{.GO_BIN}} tool cover -html={{q .GO_COVER_PROFILE}} -o {{q .GO_COVER_HTML}}
+
+  build:
+    desc: Build GO_BUILD_PKG into GO_BUILD_OUTPUT
+    vars: *vars
+    cmds:
+      - >-
+        cd {{q .GO_DIR}} &&
+        {{if .GO_BUILD_OS}}GOOS={{.GO_BUILD_OS}} {{end}}{{if .GO_BUILD_ARCH}}GOARCH={{.GO_BUILD_ARCH}} {{end}}{{if .GO_BUILD_CGO_ENABLED}}CGO_ENABLED={{.GO_BUILD_CGO_ENABLED}} {{end}}{{.GO_BIN}} build {{.GO_BUILD_FLAGS}} -o {{q .GO_BUILD_OUTPUT}} {{.GO_BUILD_PKG}}

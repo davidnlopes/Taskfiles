@@ -1,5 +1,7 @@
 version: '3'
 
+# Defaults are task-level vars for the reason given in terraform.yml.
+
 tasks:
   build:
     desc: Build the image and tag it locally

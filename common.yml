@@ -1,9 +1,5 @@
 version: '3'
 
-# Defaults live in task-level vars in every Taskfile of this repository. A file-level
-# var in an included Taskfile overwrites the consumer's root var of the same name, and
-# call vars never reach its template. Deps do not inherit call vars, so tasks forward them.
-
 tasks:
   default:
     silent: true
@@ -15,72 +11,3 @@ tasks:
     silent: true
     cmds:
       - '{{.TASK_EXE}} --list --taskfile {{q .ROOT_TASKFILE}}'
-
-  tools:
-    desc: Install the tools declared in TOOLS
-    silent: true
-    vars: &vars
-      TOOLS: '{{.TOOLS | default ""}}'
-      TOOLS_DIR: '{{.TOOLS_DIR | default (printf "%s/bin" .ROOT_DIR)}}'
-      GO_BIN: '{{.GO_BIN | default "go"}}'
-      tools_dir: '{{if regexMatch "^(/|[A-Za-z]:)" .TOOLS_DIR}}{{.TOOLS_DIR}}{{else}}{{joinPath .ROOT_DIR .TOOLS_DIR}}{{end}}'
-      tool_prefix: '{{.TOOL}}='
-      tool_spec: '{{range splitArgs .TOOLS}}{{if hasPrefix $.tool_prefix .}}{{trimPrefix $.tool_prefix .}}{{end}}{{end}}'
-      tool_path: '{{.tools_dir}}/{{.TOOL}}{{exeExt}}'
-      tool_record: '{{.tools_dir}}/.spec/{{.TOOL}}'
-    deps:
-      - for: { var: TOOLS }
-        task: tool-install
-        vars:
-          TOOL: '{{index (splitList "=" .ITEM) 0}}'
-          TOOLS: '{{.TOOLS}}'
-          TOOLS_DIR: '{{.TOOLS_DIR}}'
-          GO_BIN: '{{.GO_BIN}}'
-    cmds:
-      - cmd: echo "TOOLS is empty"
-        if: '{{if .TOOLS}}false{{else}}true{{end}}'
-
-  tools-clean:
-    desc: Remove the tools declared in TOOLS
-    vars: *vars
-    cmds:
-      - rm -rf {{range splitArgs .TOOLS}}{{q (printf "%s/%s" $.tools_dir (index (splitList "=" .) 0))}}{{exeExt}} {{end}}{{q (printf "%s/.spec" .tools_dir)}}
-
-  tool-install:
-    desc: Install TOOL when it is missing or its TOOLS entry changed
-    run: when_changed
-    requires:
-      vars: [TOOL]
-    vars: *vars
-    preconditions:
-      - sh: '{{if .tool_spec}}true{{else}}false{{end}}'
-        msg: '"{{.TOOL}}" is not declared in TOOLS'
-      - sh: '{{if contains "@" .tool_spec}}true{{else}}false{{end}}'
-        msg: 'TOOLS must declare "{{.TOOL}}" as {{.TOOL}}=MODULE@VERSION'
-    status:
-      - test -f {{q .tool_path}}
-      - test "$(cat {{q .tool_record}} 2>/dev/null)" = {{q .tool_spec}}
-    cmds:
-      - cmd: echo "Installing {{.TOOL}} ({{.tool_spec}})"
-        silent: true
-      - cmd: GOBIN={{q .tools_dir}} {{.GO_BIN}} install {{.tool_spec}}
-        silent: true
-      - cmd: 'test -f {{q .tool_path}} || { echo "go install produced no {{.TOOL}} binary: NAME in TOOLS must match the binary name" >&2; exit 1; }'
-        silent: true
-      - cmd: mkdir -p {{q (printf "%s/.spec" .tools_dir)}} && printf '%s\n' {{q .tool_spec}} > {{q .tool_record}}
-        silent: true
-
-  tool-run:
-    desc: Run TOOL with TOOL_ARGS, installing it first if needed
-    requires:
-      vars: [TOOL]
-    vars: *vars
-    deps:
-      - task: tool-install
-        vars:
-          TOOL: '{{.TOOL}}'
-          TOOLS: '{{.TOOLS}}'
-          TOOLS_DIR: '{{.TOOLS_DIR}}'
-          GO_BIN: '{{.GO_BIN}}'
-    cmds:
-      - '{{q .tool_path}} {{.TOOL_ARGS | default ""}}'

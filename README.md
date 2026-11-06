@@ -131,44 +131,9 @@ tasks:
       - aws sts get-caller-identity
 ```
 
-## Tools (`common.yml`)
+## Task list (`common.yml`)
 
-`common.yml` lists tasks and installs Go tools into a project-local directory, so every contributor and CI run uses the same versions. It needs only the Go toolchain. The verticals do not depend on it. To get the `task help` and `task tools` names, include it with `flatten: true`.
-
-Declare the tools in `TOOLS` as `NAME=MODULE@VERSION`, where `NAME` is the binary that `go install` produces. To run a tool from your own task, call `tool-run`. It installs the tool first when the tool is missing or its entry in `TOOLS` changed:
-
-```yaml
-vars:
-  TOOLS: '{{.TOOLS | default "stringer=golang.org/x/tools/cmd/stringer@v0.30.0"}}'
-
-includes:
-  common:
-    taskfile: .taskfiles/common.yml
-    flatten: true
-
-tasks:
-  generate:
-    desc: Generate String methods for the Color type
-    cmds:
-      - task: tool-run
-        vars:
-          TOOL: stringer
-          TOOL_ARGS: -type=Color
-```
-
-If a command needs the path to the tool, such as in a pipeline, add `tool-install` to `deps` with the same `TOOL` value. Then run `{{.ROOT_DIR}}/bin/stringer`, or the same path under your `TOOLS_DIR`.
-
-The task stops with an error if `TOOL` is not in `TOOLS`. Run `task tools` to install every declared tool in parallel, and `task tools-clean` to remove them.
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `TOOLS` | (empty) | Space-separated `NAME=MODULE@VERSION` entries. |
-| `TOOLS_DIR` | `<root>/bin` | Install directory. Relative paths resolve against the directory of the root Taskfile. Add it to `.gitignore`. |
-| `GO_BIN` | `go` | Go executable that runs `go install`. |
-| `TOOL` | Required by `tool-install` and `tool-run` | Name of the tool to install or run. |
-| `TOOL_ARGS` | (empty) | Arguments that `tool-run` passes to the tool. |
-
-Use a fixed version. Changing an entry reinstalls that tool, but `@latest` never changes, so Task does not check for a newer release. `task tools-clean` removes only the declared tools and their records, so other files in `TOOLS_DIR`, such as `go:build` output, stay.
+`common.yml` provides `help`, which lists the available tasks, and a `default` task that runs it. The verticals do not depend on it. To call these tasks without a namespace, include it with `flatten: true`.
 
 ## Terraform (`terraform.yml`)
 

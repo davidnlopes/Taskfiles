@@ -1,5 +1,9 @@
 version: '3'
 
+# Defaults live in task-level vars in every Taskfile of this repository. A file-level
+# var in an included Taskfile overwrites the consumer's root var of the same name, and
+# call vars never reach its template. Deps do not inherit call vars, so tasks forward them.
+
 tasks:
   init:
     desc: Initialise the root module

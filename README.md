@@ -38,16 +38,13 @@ env:
   AWS_PROFILE: my-profile
 
 includes:
-  common:
-    taskfile: .taskfiles/common.yml
-    flatten: true
   tf: .taskfiles/terraform.yml
 ```
 
 Then run:
 
 ```bash
-task                                       # lists tasks
+task --list                                # lists tasks
 task tf:plan TERRAFORM_VAR_FILES=configs/dev.tfvars
 task tf:apply TERRAFORM_AUTO_APPROVE=true
 ```
@@ -98,14 +95,10 @@ includes:
 
 ### Set the default task
 
-`task` with no name runs `help` when you include `common.yml` with `flatten: true`. To run a different task by default, exclude the `default` task and define your own:
+`task` with no name runs the `default` task in your Taskfile. If you have none, Task lists the tasks and exits with an error status. To choose what it runs, define that task:
 
 ```yaml
 includes:
-  common:
-    taskfile: .taskfiles/common.yml
-    flatten: true
-    excludes: [default]
   tf: .taskfiles/terraform.yml
 
 tasks:
@@ -116,7 +109,7 @@ tasks:
 
 ### Extend a task
 
-To run your own step before a shared task, or to give it a project name, define a task that calls it. Add a `desc` to list your task in `task help`:
+To run your own step before a shared task, or to give it a project name, define a task that calls it. Add a `desc` to list your task in `task --list`:
 
 ```yaml
 tasks:
@@ -130,10 +123,6 @@ tasks:
     cmds:
       - aws sts get-caller-identity
 ```
-
-## Task list (`common.yml`)
-
-`common.yml` provides `help`, which lists the available tasks, and a `default` task that runs it. The verticals do not depend on it. To call these tasks without a namespace, include it with `flatten: true`.
 
 ## Terraform (`terraform.yml`)
 

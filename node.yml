@@ -1,0 +1,53 @@
+version: '3'
+
+# Defaults are task-level vars for the reason given in terraform.yml.
+
+tasks:
+  install:
+    desc: Install locked dependencies with npm ci
+    run: when_changed
+    vars: &vars
+      NODE_BIN: '{{.NODE_BIN | default "npm"}}'
+      NODE_DIR: '{{.NODE_DIR | default "."}}'
+      NODE_INSTALL_FLAGS: '{{.NODE_INSTALL_FLAGS | default ""}}'
+      NODE_FMT_SCRIPT: '{{.NODE_FMT_SCRIPT | default "format"}}'
+      NODE_LINT_SCRIPTS: '{{.NODE_LINT_SCRIPTS | default "lint"}}'
+      NODE_TEST_SCRIPT: '{{.NODE_TEST_SCRIPT | default "test"}}'
+      NODE_BUILD_SCRIPT: '{{.NODE_BUILD_SCRIPT | default "build"}}'
+      NODE_AUDIT_FLAGS: '{{.NODE_AUDIT_FLAGS | default ""}}'
+    status:
+      - cd {{q .NODE_DIR}} && test node_modules/.package-lock.json -nt package-lock.json
+    cmds:
+      - cd {{q .NODE_DIR}} && {{.NODE_BIN}} ci {{.NODE_INSTALL_FLAGS}}
+
+  fmt:
+    desc: Run the NODE_FMT_SCRIPT package script
+    vars: *vars
+    cmds:
+      - cd {{q .NODE_DIR}} && {{.NODE_BIN}} run {{q .NODE_FMT_SCRIPT}}
+
+  lint:
+    desc: Run each NODE_LINT_SCRIPTS package script, in order
+    vars: *vars
+    cmds:
+      - for:
+          var: NODE_LINT_SCRIPTS
+        cmd: cd {{q .NODE_DIR}} && {{.NODE_BIN}} run {{q .ITEM}}
+
+  test:
+    desc: Run the NODE_TEST_SCRIPT package script
+    vars: *vars
+    cmds:
+      - cd {{q .NODE_DIR}} && {{.NODE_BIN}} run {{q .NODE_TEST_SCRIPT}}
+
+  build:
+    desc: Run the NODE_BUILD_SCRIPT package script
+    vars: *vars
+    cmds:
+      - cd {{q .NODE_DIR}} && {{.NODE_BIN}} run {{q .NODE_BUILD_SCRIPT}}
+
+  audit:
+    desc: Audit dependencies for known vulnerabilities
+    vars: *vars
+    cmds:
+      - cd {{q .NODE_DIR}} && {{.NODE_BIN}} audit {{.NODE_AUDIT_FLAGS}}

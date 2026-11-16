@@ -179,6 +179,7 @@ The variables use the `TERRAFORM_` prefix, not `TF_`. Terraform reads `TF_*` env
 | Variable | Default | Description |
 | --- | --- | --- |
 | `GO_BIN` | `go` | Go executable. `gofmt` comes from the same toolchain's `GOROOT`. |
+| `GO_ENV` | (empty) | Environment assignments that prefix `go test` and `go build`, for example `COVERAGE_OUTPUT=out.json`. |
 | `GO_DIR` | `.` | Module directory. Every command runs from here. |
 | `GO_BUILD_PKG` | `.` | Package that `build` compiles, for example `./cmd/api`. |
 | `GO_BUILD_OUTPUT` | `<root>/bin/` | Output path. If it ends with `/`, Go names the binary after the package. |
@@ -195,6 +196,8 @@ Commands run from `GO_DIR`, so Go resolves relative paths in `GO_BUILD_OUTPUT`, 
 
 `GO_BUILD_OS`, `GO_BUILD_ARCH`, and `GO_BUILD_CGO_ENABLED` apply only to `build`. If you export `GOOS` instead, `go test` and `go vet` also compile for that OS, and `go test` cannot run a binary built for another OS.
 
+To give Go an environment variable that your other tasks must not see, use `GO_ENV`. The value is shell text, so quote any value that contains a space, for example `NAME="two words"`. `cover-html` forwards it to `test`.
+
 To build a second binary, call `build` again with other values:
 
 ```yaml
@@ -206,6 +209,36 @@ tasks:
           GO_BUILD_PKG: ./cmd/seed
           GO_BUILD_OUTPUT: '{{.ROOT_DIR}}/bin/seed'
 ```
+
+## Node (`node.yml`)
+
+`node.yml` installs dependencies and runs the package scripts of one npm package. Every task runs a script from `package.json`, so `package.json` stays the source of truth for the commands. It supports npm only.
+
+| Task | Description |
+| --- | --- |
+| `install` | Install locked dependencies with `npm ci`. |
+| `fmt` | Run the `NODE_FMT_SCRIPT` package script. |
+| `lint` | Run each `NODE_LINT_SCRIPTS` package script, in order. |
+| `test` | Run the `NODE_TEST_SCRIPT` package script. |
+| `build` | Run the `NODE_BUILD_SCRIPT` package script. |
+| `audit` | Audit dependencies for known vulnerabilities. |
+
+`install` runs once per `task` invocation and skips when `node_modules/.package-lock.json` is newer than `package-lock.json`. Other tasks do not call `install`. To install first, add a `deps` entry that calls `install` in your own task.
+
+### Node variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `NODE_BIN` | `npm` | Package manager executable. |
+| `NODE_DIR` | `.` | Directory that holds `package.json`. Every command runs from here. |
+| `NODE_INSTALL_FLAGS` | (empty) | Extra flags for `npm ci`, for example `--ignore-scripts`. |
+| `NODE_FMT_SCRIPT` | `format` | Script that `fmt` runs. |
+| `NODE_LINT_SCRIPTS` | `lint` | Space-separated scripts that `lint` runs in order. `lint` stops at the first failure. |
+| `NODE_TEST_SCRIPT` | `test` | Script that `test` runs. |
+| `NODE_BUILD_SCRIPT` | `build` | Script that `build` runs. |
+| `NODE_AUDIT_FLAGS` | (empty) | Extra flags for `npm audit`, for example `--audit-level=high`. |
+
+`lint` is check-only when your scripts are. Point `NODE_LINT_SCRIPTS` at scripts that do not rewrite files.
 
 ## Docker (`docker.yml`)
 

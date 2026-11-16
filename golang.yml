@@ -7,6 +7,7 @@ tasks:
     desc: Rewrite Go files with gofmt -s
     vars: &vars
       GO_BIN: '{{.GO_BIN | default "go"}}'
+      GO_ENV: '{{.GO_ENV | default ""}}'
       GO_DIR: '{{.GO_DIR | default "."}}'
       GO_BUILD_PKG: '{{.GO_BUILD_PKG | default "."}}'
       GO_BUILD_OUTPUT: '{{.GO_BUILD_OUTPUT | default (printf "%s/bin/" .ROOT_DIR)}}'
@@ -46,7 +47,7 @@ tasks:
     run: when_changed
     vars: *vars
     cmds:
-      - cd {{q .GO_DIR}} && {{.GO_BIN}} test {{.GO_TEST_FLAGS}} {{if .GO_COVER_PROFILE}}-coverprofile={{q .GO_COVER_PROFILE}}{{end}} {{.GO_TEST_PKGS}}
+      - cd {{q .GO_DIR}} && {{.GO_ENV}} {{.GO_BIN}} test {{.GO_TEST_FLAGS}} {{if .GO_COVER_PROFILE}}-coverprofile={{q .GO_COVER_PROFILE}}{{end}} {{.GO_TEST_PKGS}}
 
   cover-html:
     desc: Run tests and render the coverage profile as HTML
@@ -58,6 +59,7 @@ tasks:
       - task: test
         vars:
           GO_BIN: '{{.GO_BIN}}'
+          GO_ENV: '{{.GO_ENV}}'
           GO_DIR: '{{.GO_DIR}}'
           GO_TEST_PKGS: '{{.GO_TEST_PKGS}}'
           GO_TEST_FLAGS: '{{.GO_TEST_FLAGS}}'
@@ -70,4 +72,4 @@ tasks:
     cmds:
       - >-
         cd {{q .GO_DIR}} &&
-        {{if .GO_BUILD_OS}}GOOS={{.GO_BUILD_OS}} {{end}}{{if .GO_BUILD_ARCH}}GOARCH={{.GO_BUILD_ARCH}} {{end}}{{if .GO_BUILD_CGO_ENABLED}}CGO_ENABLED={{.GO_BUILD_CGO_ENABLED}} {{end}}{{.GO_BIN}} build {{.GO_BUILD_FLAGS}} -o {{q .GO_BUILD_OUTPUT}} {{.GO_BUILD_PKG}}
+        {{.GO_ENV}} {{if .GO_BUILD_OS}}GOOS={{.GO_BUILD_OS}} {{end}}{{if .GO_BUILD_ARCH}}GOARCH={{.GO_BUILD_ARCH}} {{end}}{{if .GO_BUILD_CGO_ENABLED}}CGO_ENABLED={{.GO_BUILD_CGO_ENABLED}} {{end}}{{.GO_BIN}} build {{.GO_BUILD_FLAGS}} -o {{q .GO_BUILD_OUTPUT}} {{.GO_BUILD_PKG}}

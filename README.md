@@ -163,7 +163,7 @@ The variables use the `TERRAFORM_` prefix, not `TF_`. Terraform reads `TF_*` env
 
 ## Go (`golang.yml`)
 
-`golang.yml` formats, lints, tests, and builds one Go module. It uses only the Go toolchain.
+`golang.yml` formats, lints, tests, and builds one Go module. It needs only the Go toolchain.
 
 | Task | Description |
 | --- | --- |
@@ -187,6 +187,7 @@ The variables use the `TERRAFORM_` prefix, not `TF_`. Terraform reads `TF_*` env
 | `GO_BUILD_ARCH` | (empty) | `GOARCH` for `build` only. If empty, Go builds for the host architecture. |
 | `GO_BUILD_CGO_ENABLED` | (empty) | `CGO_ENABLED` for `build` only, `0` or `1`. If empty, Go uses the value from the environment. |
 | `GO_BUILD_FLAGS` | (empty) | Extra flags for `go build`, for example `-trimpath -ldflags="-s -w"`. |
+| `GO_TEST_CMD` | `<GO_BIN> test` | Command that `test` runs, followed by `GO_TEST_FLAGS`, the coverage flag, and `GO_TEST_PKGS`. |
 | `GO_TEST_PKGS` | `./...` | Packages that `test` runs. |
 | `GO_TEST_FLAGS` | (empty) | Extra flags for `go test`, for example `-v -race -tags=integration`. |
 | `GO_COVER_PROFILE` | `cover.out` | Coverage profile that `test` writes. If empty, `test` does not collect coverage. |
@@ -197,6 +198,16 @@ Commands run from `GO_DIR`, so Go resolves relative paths in `GO_BUILD_OUTPUT`, 
 `GO_BUILD_OS`, `GO_BUILD_ARCH`, and `GO_BUILD_CGO_ENABLED` apply only to `build`. If you export `GOOS` instead, `go test` and `go vet` also compile for that OS, and `go test` cannot run a binary built for another OS.
 
 To give Go an environment variable that your other tasks must not see, use `GO_ENV`. The value is shell text, so quote any value that contains a space, for example `NAME="two words"`. `cover-html` forwards it to `test`.
+
+To run tests through another runner, set `GO_TEST_CMD`. For example, [gotestsum](https://github.com/gotestyourself/gotestsum) prints each test as it finishes, while `go test` holds back a package's output until the whole package is done. End the command with `--`, so that gotestsum passes the flags and packages after it to `go test`:
+
+```yaml
+includes:
+  go:
+    taskfile: .taskfiles/golang.yml
+    vars:
+      GO_TEST_CMD: '{{.GO_TEST_CMD | default "go tool gotestsum --format testname --"}}'
+```
 
 To build a second binary, call `build` again with other values:
 

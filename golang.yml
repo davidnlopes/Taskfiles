@@ -15,6 +15,7 @@ tasks:
       GO_BUILD_ARCH: '{{.GO_BUILD_ARCH | default ""}}'
       GO_BUILD_CGO_ENABLED: '{{.GO_BUILD_CGO_ENABLED | default ""}}'
       GO_BUILD_FLAGS: '{{.GO_BUILD_FLAGS | default ""}}'
+      GO_TEST_CMD: '{{.GO_TEST_CMD | default (printf "%s test" .GO_BIN)}}'
       GO_TEST_PKGS: '{{.GO_TEST_PKGS | default "./..."}}'
       GO_TEST_FLAGS: '{{.GO_TEST_FLAGS | default ""}}'
       GO_COVER_PROFILE: '{{if hasKey . "GO_COVER_PROFILE"}}{{.GO_COVER_PROFILE}}{{else}}cover.out{{end}}'
@@ -47,7 +48,7 @@ tasks:
     run: when_changed
     vars: *vars
     cmds:
-      - cd {{q .GO_DIR}} && {{.GO_ENV}} {{.GO_BIN}} test {{.GO_TEST_FLAGS}} {{if .GO_COVER_PROFILE}}-coverprofile={{q .GO_COVER_PROFILE}}{{end}} {{.GO_TEST_PKGS}}
+      - cd {{q .GO_DIR}} && {{.GO_ENV}} {{.GO_TEST_CMD}} {{.GO_TEST_FLAGS}} {{if .GO_COVER_PROFILE}}-coverprofile={{q .GO_COVER_PROFILE}}{{end}} {{.GO_TEST_PKGS}}
 
   cover-html:
     desc: Run tests and render the coverage profile as HTML
@@ -61,6 +62,7 @@ tasks:
           GO_BIN: '{{.GO_BIN}}'
           GO_ENV: '{{.GO_ENV}}'
           GO_DIR: '{{.GO_DIR}}'
+          GO_TEST_CMD: '{{.GO_TEST_CMD}}'
           GO_TEST_PKGS: '{{.GO_TEST_PKGS}}'
           GO_TEST_FLAGS: '{{.GO_TEST_FLAGS}}'
           GO_COVER_PROFILE: '{{.GO_COVER_PROFILE}}'

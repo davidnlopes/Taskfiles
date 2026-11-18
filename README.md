@@ -12,7 +12,7 @@ Reusable [Task](https://taskfile.dev) tasks that you include in other repositori
 To add this repository as a Git submodule at `.taskfiles`, run:
 
 ```bash
-git submodule add https://github.com/davidnlopes/Taskfiles.git .taskfiles
+git submodule add https://github.com/davidnlopes/taskfiles.git .taskfiles
 ```
 
 Clone projects that use it with `git clone --recurse-submodules`. In CI, enable recursive submodule checkout.
